@@ -79,8 +79,29 @@ impl Fraction {
     }
 }
 
+struct Function {
+    name : String,
+    vars : Vec<String>,
+    contents : Vec<String>,
+}
+
+impl Function {
+    fn from(name : &str, vars : Vec::<String>, contents_inp : &str) -> Function {
+        let mut buf = Vec::new();
+        for i in contents_inp.split_whitespace() {
+            buf.push(String::from(i));
+        };
+        buf.reverse();
+        Function {
+            name: name.to_string(),
+            vars: vars,
+            contents: buf
+        }
+    }
+}
+
 fn main() {
-    let mut verbose : bool = false;
+    let mut verbose : bool = true;
     for arg in std::env::args() {
         if arg == "-v" {
             verbose = true;
@@ -94,11 +115,11 @@ fn main() {
         expression.push(String::from(i));
     };
     let mut keywords : Vec<String> = Vec::new();
-    keywords.push(String::from("+"));
+    keywords.push(String::from("+"));   //the 4 basic operations should keep full accuracy... i think
     keywords.push(String::from("-"));
     keywords.push(String::from("*"));
     keywords.push(String::from("/"));
-    keywords.push(String::from("sin")); //all trig functions show lose accuracy
+    keywords.push(String::from("sin"));
     keywords.push(String::from("cos"));
     keywords.push(String::from("tan"));
     keywords.push(String::from("csc"));
@@ -108,33 +129,54 @@ fn main() {
     keywords.push(String::from("root"));
     keywords.push(String::from("simplify"));
 
-    /*
-    let mut info : Vec<usize> = Vec::new();
-    let mut met_at_least_one_keyword = false;
-    for i in 0..expression.len() {
-        for keyword in &keywords {
-            if &expression[i] == keyword {
-                met_at_least_one_keyword = true;
+    let mut functions : Vec<Function> = Vec::new();
+    let one_var : Vec<String> = vec!["first".to_string()];
+    let two_vars : Vec<String> = vec!["first".to_string(), "second".to_string()];
+    functions.push(Function::from("test", two_vars.clone(), "10 first + second +"));
+    functions.push(Function::from("mult_two", one_var.clone(), "first 2 *"));
+    functions.push(Function::from("func_in_func", one_var, "first mult_two"));
+    functions.push(Function::from("pythag", two_vars.clone(), "first 2 pow second 2 pow + 2 root"));
+
+    let mut i : usize = 0;
+    while i < expression.len() {
+        for func in &functions {
+            if func.name == expression[i] {
+                if i > func.vars.len() - 1 {
+                    for content in &func.contents {
+                        expression.insert(i + 1, content.to_string());
+                    }
+                    println!("after insertion");
+                    for item in &expression {
+                        print!("{} ", item);
+                    }
+                    println!();
+                    for j in 0..func.vars.len() {
+                        //actually replacing moment
+                        for item_num in 0..expression.len() {
+                            if expression[item_num] == func.vars[j] {
+                                expression[item_num] = expression[i - func.vars.len()].clone();
+                            }
+                        }
+                        //delete it
+                        expression.remove(i - func.vars.len());
+                    }
+                    expression.remove(i - func.vars.len());
+                    println!("after deletion");
+                    for item in &expression {
+                        print!("{} ", item);
+                    }
+                    println!();
+                    i = 0; //reset to start in case there's more funcs in the spread out func
+                }
             }
         }
-        if expression[i].parse::<f64>().is_err() && !met_at_least_one_keyword {
-            println!("'{}' could not be parsed", expression[i]);
-        }
+        i += 1;
     }
-    if evaluate(expression.len() - 1, &mut expression, &mut info).is_none() {
-        println!("The expression could not be calculated");
-    } else {
-        println!("{}", evaluate(expression.len() - 1, &mut expression, &mut info).unwrap());
-        
-        println!("LEFTOVER:");
-        for i in expression.iter().enumerate() {
-            if !info.contains(&i.0) {
-                print!("{}", i.1);
-            }
-        }
-        
+
+    for item in &expression {
+        print!("{} ", item);
     }
-    */
+    println!();
 
     let mut stack : Vec<Fraction> = Vec::new();
     let mut counter : usize = 0;
