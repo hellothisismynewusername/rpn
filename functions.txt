@@ -1,0 +1,19 @@
+Anything not inside of the function starter text and the function ending text is ignored
+(in this case the start and ending texts are the greater and less than signs).
+Use ASCII chars.
+
+(function start text) (function name) (function vars) = (function body) (function end text)
+No spaces in function name, but spaces to seperate the stuff and spaces in between vars and spaces inside the function body.
+
+> avg2 x y = x y + 2 / <
+//
+use this first one like:
+1 5 avg2
+and it becomes
+1 5 + 2 /
+
+Vars can be skipped (but the name and body should not be skipped).
+> PI = 355 113 / <
+
+> func_in_func multi char var names = multi var avg2 char names avg2 avg2 <
+> i_give_multiple_things = 100 200 <

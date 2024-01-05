@@ -1,3 +1,7 @@
+use std::path::Path;
+use std::fs::File;
+use std::io::{Write, Read};
+
 #[derive(Clone)]
 struct Fraction {
     numer : String,
@@ -86,25 +90,120 @@ struct Function {
 }
 
 impl Function {
-    fn from(name : &str, vars : Vec::<String>, contents_inp : &str) -> Function {
+    fn from(name : &str, vars : &str, contents_inp : &str) -> Function {
         let mut buf = Vec::new();
         for i in contents_inp.split_whitespace() {
             buf.push(String::from(i));
         };
         buf.reverse();
+        let mut real_vars = Vec::new();
+        for i in vars.split_whitespace() {
+            real_vars.push(String::from(i));
+        };
         Function {
             name: name.to_string(),
-            vars: vars,
+            vars: real_vars,
             contents: buf
         }
     }
 }
 
 fn main() {
-    let mut verbose : bool = true;
+    let mut verbose : bool = false;
     for arg in std::env::args() {
         if arg == "-v" {
             verbose = true;
+        }
+    }
+
+    let function_starter_text = ">";
+    let function_ending_text = "<";
+    
+    let mut keywords : Vec<String> = Vec::new();
+    keywords.push(String::from("+"));   //the 4 basic operations should keep full accuracy I think
+    keywords.push(String::from("-"));
+    keywords.push(String::from("*"));
+    keywords.push(String::from("/"));
+    keywords.push(String::from("sin"));
+    keywords.push(String::from("cos"));
+    keywords.push(String::from("tan"));
+    keywords.push(String::from("asin"));
+    keywords.push(String::from("acos"));
+    keywords.push(String::from("atan"));
+    keywords.push(String::from("atan2"));
+    keywords.push(String::from("csc"));
+    keywords.push(String::from("sec"));
+    keywords.push(String::from("cot"));
+    keywords.push(String::from("pow"));
+    keywords.push(String::from("root"));
+    keywords.push(String::from("simplify"));
+
+    let mut functions : Vec<Function> = Vec::new();
+    
+    functions.push(Function::from("test", "x y", "10 x + y +"));
+
+    if !Path::new("functions.txt").exists() {
+        let mut writefile = if !File::create("functions.txt").is_err() {
+            File::create("functions.txt").unwrap()
+        } else {
+            File::create("functions.txt").expect("Couldn't make file 'functions.txt'")
+        };
+        let buf : [u8; 1] = [0; 1];
+        let res = writefile.write_all(&buf);
+        if res.is_err() {
+            if verbose { println!("Couldn't write to file 'functions.txt'"); }
+        }
+    }
+
+    let mut readfile = File::open("functions.txt").expect("Couldn't open 'functions.txt'");
+    let mut readfile_buf : Vec<u8> = Vec::new();
+    readfile.read_to_end(&mut readfile_buf).expect("Couldn't read 'functions.txt'");
+    let readfile_as_text : String = readfile_buf.iter().map(|x| {
+        *x as char
+    }).collect();
+    if verbose { println!("Buffer is: {}", readfile_as_text); }
+    let mut readfile_split : Vec<String> = readfile_as_text.split_ascii_whitespace().into_iter().map(|x| {
+        x.to_string()
+    }).collect();
+    readfile_split.push(" ".to_string());
+    for i in 0..readfile_split.len() {
+        if verbose { println!("item: {}", readfile_split[i]); }
+        if readfile_split[i] == function_starter_text.to_string() {
+            let mut function_name = "";
+            function_name = &readfile_split[i + 1];
+
+            let mut j = 0;
+            let mut function_vars : String = String::new();
+            while readfile_split[i + j + 2] != "=" {
+                function_vars.push_str(&readfile_split[i + j + 2]);
+                function_vars.push_str(" ");
+                j += 1;
+            }
+
+            let mut k = 0;
+            let mut function_contents : String = String::new();
+            while readfile_split[i + j + k + 3] != function_ending_text.to_string() && i + j + k + 3 < readfile_split.len() - 1 {
+                function_contents.push_str(&readfile_split[i + j + k + 3]);
+                function_contents.push_str(" ");
+                k += 1;
+            }
+
+            functions.push(Function::from(function_name, &function_vars, &function_contents));
+            
+            if verbose {
+                println!("now the functions are:");
+                for function in &functions {
+                    println!("{}, vars are: ", function.name);
+                    for var in &function.vars {
+                        print!("{} ", var);
+                    }
+                    println!(", contents are: ");
+                    for content in &function.contents {
+                        print!("{} ", content);
+                    }
+                    println!("\nend of this fun");
+                }
+            }
         }
     }
 
@@ -114,42 +213,22 @@ fn main() {
     for i in input.split_whitespace() {
         expression.push(String::from(i));
     };
-    let mut keywords : Vec<String> = Vec::new();
-    keywords.push(String::from("+"));   //the 4 basic operations should keep full accuracy... i think
-    keywords.push(String::from("-"));
-    keywords.push(String::from("*"));
-    keywords.push(String::from("/"));
-    keywords.push(String::from("sin"));
-    keywords.push(String::from("cos"));
-    keywords.push(String::from("tan"));
-    keywords.push(String::from("csc"));
-    keywords.push(String::from("sec"));
-    keywords.push(String::from("cot"));
-    keywords.push(String::from("pow"));
-    keywords.push(String::from("root"));
-    keywords.push(String::from("simplify"));
-
-    let mut functions : Vec<Function> = Vec::new();
-    let one_var : Vec<String> = vec!["first".to_string()];
-    let two_vars : Vec<String> = vec!["first".to_string(), "second".to_string()];
-    functions.push(Function::from("test", two_vars.clone(), "10 first + second +"));
-    functions.push(Function::from("mult_two", one_var.clone(), "first 2 *"));
-    functions.push(Function::from("func_in_func", one_var, "first mult_two"));
-    functions.push(Function::from("pythag", two_vars.clone(), "first 2 pow second 2 pow + 2 root"));
 
     let mut i : usize = 0;
     while i < expression.len() {
         for func in &functions {
             if func.name == expression[i] {
-                if i > func.vars.len() - 1 {
+                if func.vars.len() > 0 && i > func.vars.len() - 1 {
                     for content in &func.contents {
                         expression.insert(i + 1, content.to_string());
                     }
-                    println!("after insertion");
-                    for item in &expression {
-                        print!("{} ", item);
+                    if verbose {
+                        println!("after insertion");
+                        for item in &expression {
+                            print!("{} ", item);
+                        }
+                        println!();
                     }
-                    println!();
                     for j in 0..func.vars.len() {
                         //actually replacing moment
                         for item_num in 0..expression.len() {
@@ -161,11 +240,33 @@ fn main() {
                         expression.remove(i - func.vars.len());
                     }
                     expression.remove(i - func.vars.len());
-                    println!("after deletion");
-                    for item in &expression {
-                        print!("{} ", item);
+                    if verbose { 
+                        println!("after deletion");
+                        for item in &expression {
+                            print!("{} ", item);
+                        }
+                        println!();
                     }
-                    println!();
+                    i = 0; //reset to start in case there's more funcs in the spread out func
+                } else {
+                    for content in &func.contents {
+                        expression.insert(i + 1, content.to_string());
+                    }
+                    if verbose { 
+                        println!("after insertion");
+                        for item in &expression {
+                            print!("{} ", item);
+                        }
+                        println!();
+                    }
+                    expression.remove(i - func.vars.len());
+                    if verbose { 
+                        println!("after deletion");
+                        for item in &expression {
+                            print!("{} ", item);
+                        }
+                        println!();
+                    }
                     i = 0; //reset to start in case there's more funcs in the spread out func
                 }
             }
@@ -327,6 +428,50 @@ fn evaluate(inp : usize, expr : &Vec<Fraction>, inputs_amount : &mut usize, verb
             } else {
                 Some(Fraction {
                     numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).tan()).to_string(),
+                    denom: "1".to_string()
+                })
+            }
+        } else if expr[inp].numer == "asin" {
+            *inputs_amount = 1;
+            if inp <= 0 {
+                *inputs_amount = 0;
+                None
+            } else {
+                Some(Fraction {
+                    numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).asin()).to_string(),
+                    denom: "1".to_string()
+                })
+            }
+        } else if expr[inp].numer == "acos" {
+            *inputs_amount = 1;
+            if inp <= 0 {
+                *inputs_amount = 0;
+                None
+            } else {
+                Some(Fraction {
+                    numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).acos()).to_string(),
+                    denom: "1".to_string()
+                })
+            }
+        } else if expr[inp].numer == "atan" {
+            *inputs_amount = 1;
+            if inp <= 0 {
+                *inputs_amount = 0;
+                None
+            } else {
+                Some(Fraction {
+                    numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).atan()).to_string(),
+                    denom: "1".to_string()
+                })
+            }
+        } else if expr[inp].numer == "atan2" {
+            *inputs_amount = 2;
+            if inp <= 1 {
+                *inputs_amount = 0;
+                None
+            } else {
+                Some(Fraction {
+                    numer: ((evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).atan2(evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())).to_string(),
                     denom: "1".to_string()
                 })
             }
