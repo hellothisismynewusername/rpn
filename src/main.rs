@@ -169,8 +169,7 @@ fn main() {
     for i in 0..readfile_split.len() {
         if verbose { println!("item: {}", readfile_split[i]); }
         if readfile_split[i] == function_starter_text.to_string() {
-            let mut function_name = "";
-            function_name = &readfile_split[i + 1];
+            let function_name = &readfile_split[i + 1];
 
             let mut j = 0;
             let mut function_vars : String = String::new();

@@ -17,3 +17,4 @@ Vars can be skipped (but the name and body should not be skipped).
 
 > func_in_func multi char var names = multi var avg2 char names avg2 avg2 <
 > i_give_multiple_things = 100 200 <
+> useless_thing input = input 3 / 3 * <
