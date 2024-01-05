@@ -43,10 +43,44 @@ impl Fraction {
             })
         }
     }
+    fn simplify(&self) -> Fraction {
+        if self.numer.parse::<i64>().is_err() || self.denom.parse::<i64>().is_err() {
+            return Fraction {
+                numer: self.numer.clone(),
+                denom: self.denom.clone()
+            };
+        }
+        let numer: i64 = self.numer.parse::<i64>().unwrap();
+        let denom: i64 = self.denom.parse::<i64>().unwrap();
+        let mut new_numer : i64 = numer;
+        let mut new_denom : i64 = denom;
+        let mut divisor : u64 = 2;
+        if numer <= denom {
+            while (divisor as i64) <= new_numer {
+                if (new_numer as f64) % (divisor as f64) == 0. && (new_denom as f64) % (divisor as f64) == 0. {
+                    new_numer /= divisor as i64;
+                    new_denom /= divisor as i64;
+                }
+                divisor += 1;
+            }
+        } else {
+            while (divisor as i64) <= new_denom {
+                if (new_numer as f64) % (divisor as f64) == 0. && (new_denom as f64) % (divisor as f64) == 0. {
+                    new_numer /= divisor as i64;
+                    new_denom /= divisor as i64;
+                }
+                divisor += 1;
+            }
+        }
+        Fraction {
+            numer: new_numer.to_string(),
+            denom: new_denom.to_string()
+        }
+    }
 }
 
 fn main() {
-    let mut verbose : bool = true;
+    let mut verbose : bool = false;
     for arg in std::env::args() {
         if arg == "-v" {
             verbose = true;
@@ -133,6 +167,13 @@ fn main() {
         for _i in 0..inputs_amount {
             stack.remove(stack_length - inputs_amount - 1);
         };
+
+        
+        stack = stack.iter().map(|x| {
+            x.simplify()
+        }).collect::<Vec<Fraction>>();
+        
+        
         if verbose {
             println!("Stack on iteration {} AFTER changes is: ", counter);
             for i in &stack {
@@ -150,6 +191,7 @@ fn main() {
             print!("{}, ", i.as_decimal().unwrap());
         }
     }
+    println!();
 }
 
 fn is_a_keyword(inp : &String, keywords : &Vec<String>) -> bool {
