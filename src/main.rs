@@ -136,11 +136,9 @@ fn main() {
     keywords.push(String::from("cot"));
     keywords.push(String::from("pow"));
     keywords.push(String::from("root"));
-    keywords.push(String::from("simplify"));
+    keywords.push(String::from("simplify")); //this one also keeps full accuracy
 
     let mut functions : Vec<Function> = Vec::new();
-    
-    functions.push(Function::from("test", "x y", "10 x + y +"));
 
     if !Path::new("functions.txt").exists() {
         let mut writefile = if !File::create("functions.txt").is_err() {

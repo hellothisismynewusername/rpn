@@ -17,4 +17,10 @@ Vars can be skipped (but the name and body should not be skipped).
 
 > func_in_func multi char var names = multi var avg2 char names avg2 avg2 <
 > i_give_multiple_things = 100 200 <
-> useless_thing input = input 3 / 3 * <
+> useless input = input 3 / 3 * <
+
+> mag_and_angle_from_components x y = x 2 pow y 2 pow +  2 root y x atan2 <
+> rad_to_deg rad = rad 180 PI / * <
+> deg_to_rad deg = deg PI 180 / * <
+
+> the_silly = 0.1 0.2 + simplify <
