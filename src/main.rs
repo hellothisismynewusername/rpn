@@ -156,9 +156,7 @@ fn main() {
     let mut readfile = File::open("functions.txt").expect("Couldn't open 'functions.txt'");
     let mut readfile_buf : Vec<u8> = Vec::new();
     readfile.read_to_end(&mut readfile_buf).expect("Couldn't read 'functions.txt'");
-    let readfile_as_text : String = readfile_buf.iter().map(|x| {
-        *x as char
-    }).collect();
+    let readfile_as_text : String = String::from_utf8(readfile_buf).expect("Couldn't get unicode chars from file");
     if verbose { println!("Buffer is: {}", readfile_as_text); }
     let mut readfile_split : Vec<String> = readfile_as_text.split_ascii_whitespace().into_iter().map(|x| {
         x.to_string()
@@ -204,6 +202,7 @@ fn main() {
         }
     }
 
+    loop {
     let mut input = String::new();
     let mut expression : Vec<String> = Vec::new();
     std::io::stdin().read_line(&mut input).unwrap();
@@ -327,6 +326,8 @@ fn main() {
         }
     }
     println!();
+    println!();
+    }
 }
 
 fn is_a_keyword(inp : &String, keywords : &Vec<String>) -> bool {
