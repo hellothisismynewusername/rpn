@@ -1,8 +1,8 @@
-Anything not inside of the function starter text and the function ending text is ignored
+ Anything not inside of the macro starter text and the macro ending text is ignored
 (in this case the start and ending texts are the greater and less than signs).
 
-(function start text) (function name) (function vars) = (function body) (function end text)
-No spaces in function name, but spaces to seperate the stuff and spaces in between vars and spaces inside the function body.
+(macro start text) (macro name) (macro vars) = (macro body) (macro end text)
+No spaces in macro name, but spaces to seperate the stuff and spaces in between vars and spaces inside the macro body.
 
 > avg2 x y = x y + 2 / <
 //
@@ -14,7 +14,7 @@ and it becomes
 Vars can be skipped (but the name and body should not be skipped).
 > PI = 355 113 / <
 
-> func_in_func multi char var names = multi var avg2 char names avg2 avg2 <
+> macro_in_macro multi char var names = multi var avg2 char names avg2 avg2 <
 > i_give_multiple_things = 100 200 <
 > useless input = input 3 / 3 * <
 
@@ -24,3 +24,5 @@ Vars can be skipped (but the name and body should not be skipped).
 
 > the_silly = 0.1 0.2 + simplify <
 > 😂 🙂🤥 = 🙂🤥 100 * <
+
+Recursion is not possible, as these aren't functions.

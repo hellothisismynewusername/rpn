@@ -83,14 +83,14 @@ impl Fraction {
     }
 }
 
-struct Function {
+struct Macr {
     name : String,
     vars : Vec<String>,
     contents : Vec<String>,
 }
 
-impl Function {
-    fn from(name : &str, vars : &str, contents_inp : &str) -> Function {
+impl Macr {
+    fn from(name : &str, vars : &str, contents_inp : &str) -> Macr {
         let mut buf = Vec::new();
         for i in contents_inp.split_whitespace() {
             buf.push(String::from(i));
@@ -100,7 +100,7 @@ impl Function {
         for i in vars.split_whitespace() {
             real_vars.push(String::from(i));
         };
-        Function {
+        Macr {
             name: name.to_string(),
             vars: real_vars,
             contents: buf
@@ -116,8 +116,8 @@ fn main() {
         }
     }
 
-    let function_starter_text = ">";
-    let function_ending_text = "<";
+    let macr_starter_text = ">";
+    let macr_ending_text = "<";
     
     let mut keywords : Vec<String> = Vec::new();
     keywords.push(String::from("+"));   //the 4 basic operations should keep full accuracy I think
@@ -138,24 +138,24 @@ fn main() {
     keywords.push(String::from("root"));
     keywords.push(String::from("simplify")); //this one also keeps full accuracy
 
-    let mut functions : Vec<Function> = Vec::new();
+    let mut macrs : Vec<Macr> = Vec::new();
 
-    if !Path::new("functions.txt").exists() {
-        let mut writefile = if !File::create("functions.txt").is_err() {
-            File::create("functions.txt").unwrap()
+    if !Path::new("macros.txt").exists() {
+        let mut writefile = if !File::create("macros.txt").is_err() {
+            File::create("macros.txt").unwrap()
         } else {
-            File::create("functions.txt").expect("Couldn't make file 'functions.txt'")
+            File::create("macros.txt").expect("Couldn't make file 'macros.txt'")
         };
         let buf : [u8; 1] = [0; 1];
         let res = writefile.write_all(&buf);
         if res.is_err() {
-            if verbose { println!("Couldn't write to file 'functions.txt'"); }
+            if verbose { println!("Couldn't write to file 'macros.txt'"); }
         }
     }
 
-    let mut readfile = File::open("functions.txt").expect("Couldn't open 'functions.txt'");
+    let mut readfile = File::open("macros.txt").expect("Couldn't open 'macros.txt'");
     let mut readfile_buf : Vec<u8> = Vec::new();
-    readfile.read_to_end(&mut readfile_buf).expect("Couldn't read 'functions.txt'");
+    readfile.read_to_end(&mut readfile_buf).expect("Couldn't read 'macros.txt'");
     let readfile_as_text : String = String::from_utf8(readfile_buf).expect("Couldn't get unicode chars from file");
     if verbose { println!("Buffer is: {}", readfile_as_text); }
     let mut readfile_split : Vec<String> = readfile_as_text.split_ascii_whitespace().into_iter().map(|x| {
@@ -164,36 +164,36 @@ fn main() {
     readfile_split.push(" ".to_string());
     for i in 0..readfile_split.len() {
         if verbose { println!("item: {}", readfile_split[i]); }
-        if readfile_split[i] == function_starter_text.to_string() {
-            let function_name = &readfile_split[i + 1];
+        if readfile_split[i] == macr_starter_text.to_string() {
+            let macr_name = &readfile_split[i + 1];
 
             let mut j = 0;
-            let mut function_vars : String = String::new();
+            let mut macr_vars : String = String::new();
             while readfile_split[i + j + 2] != "=" {
-                function_vars.push_str(&readfile_split[i + j + 2]);
-                function_vars.push_str(" ");
+                macr_vars.push_str(&readfile_split[i + j + 2]);
+                macr_vars.push_str(" ");
                 j += 1;
             }
 
             let mut k = 0;
-            let mut function_contents : String = String::new();
-            while readfile_split[i + j + k + 3] != function_ending_text.to_string() && i + j + k + 3 < readfile_split.len() - 1 {
-                function_contents.push_str(&readfile_split[i + j + k + 3]);
-                function_contents.push_str(" ");
+            let mut macr_contents : String = String::new();
+            while readfile_split[i + j + k + 3] != macr_ending_text.to_string() && i + j + k + 3 < readfile_split.len() - 1 {
+                macr_contents.push_str(&readfile_split[i + j + k + 3]);
+                macr_contents.push_str(" ");
                 k += 1;
             }
 
-            functions.push(Function::from(function_name, &function_vars, &function_contents));
+            macrs.push(Macr::from(macr_name, &macr_vars, &macr_contents));
             
             if verbose {
-                println!("now the functions are:");
-                for function in &functions {
-                    println!("{}, vars are: ", function.name);
-                    for var in &function.vars {
+                println!("now the macrs are:");
+                for macr in &macrs {
+                    println!("{}, vars are: ", macr.name);
+                    for var in &macr.vars {
                         print!("{} ", var);
                     }
                     println!(", contents are: ");
-                    for content in &function.contents {
+                    for content in &macr.contents {
                         print!("{} ", content);
                     }
                     println!("\nend of this fun");
@@ -203,130 +203,136 @@ fn main() {
     }
 
     loop {
-    let mut input = String::new();
-    let mut expression : Vec<String> = Vec::new();
-    std::io::stdin().read_line(&mut input).unwrap();
-    for i in input.split_whitespace() {
-        expression.push(String::from(i));
-    };
 
-    let mut i : usize = 0;
-    while i < expression.len() {
-        for func in &functions {
-            if func.name == expression[i] {
-                if func.vars.len() > 0 && i > func.vars.len() - 1 {
-                    for content in &func.contents {
-                        expression.insert(i + 1, content.to_string());
-                    }
-                    if verbose {
-                        println!("after insertion");
-                        for item in &expression {
-                            print!("{} ", item);
-                        }
-                        println!();
-                    }
-                    for j in 0..func.vars.len() {
-                        //actually replacing moment
-                        for item_num in 0..expression.len() {
-                            if expression[item_num] == func.vars[j] {
-                                expression[item_num] = expression[i - func.vars.len()].clone();
+        let mut input = String::new();
+        let mut expression : Vec<String> = Vec::new();
+        std::io::stdin().read_line(&mut input).unwrap();
+        for i in input.split_whitespace() {
+            expression.push(String::from(i));
+        };
+
+    
+        
+        let mut i : usize = 0;
+        while i < expression.len() {
+            for mac in &macrs {
+                if mac.name == expression[i] {
+                    if mac.vars.len() > 0 {
+                        if  i > mac.vars.len() - 1 {
+                            for content in &mac.contents {
+                                expression.insert(i + 1, content.to_string());
                             }
+                            if verbose {
+                                println!("after insertion");
+                                for item in &expression {
+                                    print!("{} ", item);
+                                }
+                                println!();
+                            }
+                            for j in 0..mac.vars.len() {
+                                //actually replacing moment
+                                for item_num in 0..expression.len() {
+                                    if expression[item_num] == mac.vars[j] {
+                                        expression[item_num] = expression[i - mac.vars.len()].clone();
+                                    }
+                                }
+                                //delete it
+                                expression.remove(i - mac.vars.len());
+                            }
+                            expression.remove(i - mac.vars.len());
+                            if verbose { 
+                                println!("after deletion");
+                                for item in &expression {
+                                    print!("{} ", item);
+                                }
+                                println!();
+                            }
+                            i = 0; //reset to start in case there's more macs in the spread out mac
                         }
-                        //delete it
-                        expression.remove(i - func.vars.len());
-                    }
-                    expression.remove(i - func.vars.len());
-                    if verbose { 
-                        println!("after deletion");
-                        for item in &expression {
-                            print!("{} ", item);
+                    } else {
+                        for content in &mac.contents {
+                            expression.insert(i + 1, content.to_string());
                         }
-                        println!();
-                    }
-                    i = 0; //reset to start in case there's more funcs in the spread out func
-                } else {
-                    for content in &func.contents {
-                        expression.insert(i + 1, content.to_string());
-                    }
-                    if verbose { 
-                        println!("after insertion");
-                        for item in &expression {
-                            print!("{} ", item);
+                        if verbose { 
+                            println!("after insertion");
+                            for item in &expression {
+                                print!("{} ", item);
+                            }
+                            println!();
                         }
-                        println!();
-                    }
-                    expression.remove(i - func.vars.len());
-                    if verbose { 
-                        println!("after deletion");
-                        for item in &expression {
-                            print!("{} ", item);
+                        expression.remove(i - mac.vars.len());
+                        if verbose { 
+                            println!("after deletion");
+                            for item in &expression {
+                                print!("{} ", item);
+                            }
+                            println!();
                         }
-                        println!();
+                        i = 0; //reset to start in case there's more macs in the spread out mac
                     }
-                    i = 0; //reset to start in case there's more funcs in the spread out func
                 }
             }
+            i += 1;
         }
-        i += 1;
-    }
-
-    for item in &expression {
-        print!("{} ", item);
-    }
-    println!();
-
-    let mut stack : Vec<Fraction> = Vec::new();
-    let mut counter : usize = 0;
-    while counter < expression.len() {
-        if verbose {
-            println!("Stack on iteration {} BEFORE changes is: ", counter);
-            for i in &stack {
-                print!("({}/{})", i.numer, i.denom);
-            }
-        }
-        if verbose { println!(); }
         
-        if is_a_keyword(&expression[counter], &keywords) {
-            stack.push(Fraction::over_one(expression[counter].clone()));
-        } else {
-            stack.push(Fraction::from_decimal(expression[counter].clone()).unwrap_or(Fraction::over_one(String::from("Err"))));
-        }
 
-        let stack_length = stack.len();
-        let mut inputs_amount : usize = 0;
-        stack[stack_length - 1] = if is_a_keyword(&stack[stack.len() - 1].numer, &keywords) {
-            if evaluate(stack_length - 1, &stack, &mut inputs_amount, verbose).is_none() {
-                Fraction::over_one("Err".to_string())
+        for item in &expression {
+            print!("{} ", item);
+        }
+        println!();
+
+        let mut stack : Vec<Fraction> = Vec::new();
+        let mut counter : usize = 0;
+        while counter < expression.len() {
+            if verbose {
+                println!("Stack on iteration {} BEFORE changes is: ", counter);
+                for i in &stack {
+                    print!("({}/{})", i.numer, i.denom);
+                }
+            }
+            if verbose { println!(); }
+            
+            if is_a_keyword(&expression[counter], &keywords) {
+                stack.push(Fraction::over_one(expression[counter].clone()));
             } else {
-                evaluate(stack_length - 1, &stack, &mut inputs_amount, verbose).unwrap()
+                stack.push(Fraction::from_decimal(expression[counter].clone()).unwrap_or(Fraction::over_one(String::from("Err"))));
             }
-        } else {
-            stack[stack_length - 1].clone()
-        };
-        if verbose { println!("input amount is {}", inputs_amount); }
-        for _i in 0..inputs_amount {
-            stack.remove(stack_length - inputs_amount - 1);
-        };
-        
-        if verbose {
-            println!("Stack on iteration {} AFTER changes is: ", counter);
-            for i in &stack {
-                print!("({}/{})", i.numer, i.denom);
+
+            let stack_length = stack.len();
+            let mut inputs_amount : usize = 0;
+            stack[stack_length - 1] = if is_a_keyword(&stack[stack.len() - 1].numer, &keywords) {
+                if evaluate(stack_length - 1, &stack, &mut inputs_amount, verbose).is_none() {
+                    Fraction::over_one("Err".to_string())
+                } else {
+                    evaluate(stack_length - 1, &stack, &mut inputs_amount, verbose).unwrap()
+                }
+            } else {
+                stack[stack_length - 1].clone()
+            };
+            if verbose { println!("input amount is {}", inputs_amount); }
+            for _i in 0..inputs_amount {
+                stack.remove(stack_length - inputs_amount - 1);
+            };
+            
+            if verbose {
+                println!("Stack on iteration {} AFTER changes is: ", counter);
+                for i in &stack {
+                    print!("({}/{})", i.numer, i.denom);
+                }
+            }
+            counter += 1;
+        }
+        println!("\nOutput:");
+        for i in &stack {
+            print!("({}/{}) = ", i.numer, i.denom);
+            if i.as_decimal().is_none() {
+                print!("Err, ");
+            } else {
+                print!("{}, ", i.as_decimal().unwrap());
             }
         }
-        counter += 1;
-    }
-    println!("\nOutput:");
-    for i in &stack {
-        print!("({}/{}) = ", i.numer, i.denom);
-        if i.as_decimal().is_none() {
-            print!("Err, ");
-        } else {
-            print!("{}, ", i.as_decimal().unwrap());
-        }
-    }
-    println!();
-    println!();
+        println!();
+        println!();
     }
 }
 
