@@ -540,7 +540,7 @@ fn evaluate(inp : usize, expr : &Vec<Fraction>, inputs_amount : &mut usize, verb
             } else {
                 Some(Fraction {
                     numer: (evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())
-                            .log((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()))
+                            .log(evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())
                             .to_string(),
                     denom: "1".to_string()
                 })

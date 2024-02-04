@@ -13,8 +13,10 @@ and it becomes
 
 Vars can be skipped (but the name and body should not be skipped).
 > pi = 355 113 / <
-> e = PI 4 pow PI 5 pow + 6 root <
+> e = pi 4 pow pi 5 pow + 6 root <
+
 > ln input = input e log <
+> sqrt thingy = thingy 2 root <
 
 > i_give_multiple_things = 100 200 <
 > useless input = input 3 / 3 * <
