@@ -12,9 +12,10 @@ and it becomes
 1 5 + 2 /
 
 Vars can be skipped (but the name and body should not be skipped).
-> PI = 355 113 / <
+> pi = 355 113 / <
+> e = PI 4 pow PI 5 pow + 6 root <
+> ln input = input e log <
 
-> macro_in_macro multi char var names = multi var avg2 char names avg2 avg2 <
 > i_give_multiple_things = 100 200 <
 > useless input = input 3 / 3 * <
 

@@ -136,6 +136,7 @@ fn main() {
     keywords.push(String::from("cot"));
     keywords.push(String::from("pow"));
     keywords.push(String::from("root"));
+    keywords.push(String::from("log"));
     keywords.push(String::from("simplify")); //this one also keeps full accuracy
 
     let mut macrs : Vec<Macr> = Vec::new();
@@ -215,6 +216,7 @@ fn main() {
         
         let mut i : usize = 0;
         while i < expression.len() {
+            let mut do_not_increment : bool = false;
             for mac in &macrs {
                 if mac.name == expression[i] {
                     if mac.vars.len() > 0 {
@@ -248,6 +250,7 @@ fn main() {
                                 println!();
                             }
                             i = 0; //reset to start in case there's more macs in the spread out mac
+                            do_not_increment = true;
                         }
                     } else {
                         for content in &mac.contents {
@@ -269,10 +272,13 @@ fn main() {
                             println!();
                         }
                         i = 0; //reset to start in case there's more macs in the spread out mac
+                        do_not_increment = true;
                     }
                 }
             }
-            i += 1;
+            if !do_not_increment {
+                i += 1;
+            }
         }
         
 
@@ -524,6 +530,19 @@ fn evaluate(inp : usize, expr : &Vec<Fraction>, inputs_amount : &mut usize, verb
                 Some(Fraction {
                     numer: evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap().powf(evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap()).to_string(),
                     denom: evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap().powf(evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap()).to_string()
+                })
+            }
+        } else if expr[inp].numer == "log" {
+            *inputs_amount = 2;
+            if inp <= 1 {
+                *inputs_amount = 0;
+                None
+            } else {
+                Some(Fraction {
+                    numer: (evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())
+                            .log((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()))
+                            .to_string(),
+                    denom: "1".to_string()
                 })
             }
         } else if expr[inp].numer == "simplify" {
