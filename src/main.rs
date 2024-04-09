@@ -1,6 +1,7 @@
 use std::path::Path;
 use std::fs::File;
 use std::io::{Write, Read};
+use std::process::exit;
 
 #[derive(Clone)]
 struct Fraction {
@@ -110,10 +111,27 @@ impl Macr {
 
 fn main() {
     let mut verbose : bool = false;
-    for arg in std::env::args() {
-        if arg == "-v" {
-            verbose = true;
+    let mut input_file_name : Option<String> = None;
+    let mut grab_next_arg = false;
+
+    for (i, arg) in std::env::args().enumerate() {
+        if i > 0 {
+            if arg == "-v" {
+                verbose = true;
+            }
+            if arg == "-f" && i < std::env::args().len() - 1 {
+                grab_next_arg = true;
+            }
+            if grab_next_arg {
+                input_file_name = Some(arg.clone());
+            }
         }
+    }
+    let mut input_file;
+    let mut file_buf : Vec<u8> = Vec::new();
+    if input_file_name.is_some() {
+        input_file = File::open(input_file_name.clone().unwrap()).expect("Couldn't open '{file_name}'");
+        input_file.read_to_end(&mut file_buf).expect("Couldn't read the file");
     }
 
     let macr_starter_text = ">";
@@ -138,6 +156,9 @@ fn main() {
     keywords.push(String::from("root"));
     keywords.push(String::from("log"));
     keywords.push(String::from("simplify")); //this one also keeps full accuracy
+    keywords.push(String::from("%"));
+    keywords.push(String::from("mod"));
+    keywords.push(String::from("pwr"));
 
     let mut macrs : Vec<Macr> = Vec::new();
 
@@ -204,15 +225,20 @@ fn main() {
     }
 
     loop {
-
         let mut input = String::new();
         let mut expression : Vec<String> = Vec::new();
-        std::io::stdin().read_line(&mut input).unwrap();
-        for i in input.split_whitespace() {
-            expression.push(String::from(i));
-        };
 
-    
+        if input_file_name.is_none() {
+            std::io::stdin().read_line(&mut input).unwrap();
+            for i in input.split_whitespace() {
+                expression.push(String::from(i));
+            };
+        } else {
+            input = String::from_utf8(file_buf.clone()).expect("uh oh");
+            for i in input.split_whitespace() {
+                expression.push(String::from(i));
+            };
+        }
         
         let mut i : usize = 0;
         while i < expression.len() {
@@ -337,6 +363,9 @@ fn main() {
                 print!("{}, ", i.as_decimal().unwrap());
             }
         }
+        if input_file_name.is_some() {
+            exit(0);
+        }
         println!();
         println!();
     }
@@ -351,6 +380,257 @@ fn is_a_keyword(inp : &String, keywords : &Vec<String>) -> bool {
     return false;
 }
 
+fn evaluate(inp : usize, expr : &Vec<Fraction>, inputs_amount : &mut usize, verbose : bool) -> Option<Fraction> {
+    if verbose { println!("Im at {}, and i see ({}/{})", inp, expr[inp].numer, expr[inp].denom); }
+    if expr[inp].numer.parse::<f64>().is_err() {
+        match &expr[inp].numer as &str {
+            "+" => {
+                *inputs_amount = 2;
+                if inp <= 1 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: ((evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() * evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()) +
+                        evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() * evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).to_string(),
+                        denom: (evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap() * evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).to_string()
+                    })
+                }
+            },
+            "-" => {
+                *inputs_amount = 2;
+                if inp <= 1 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: ((evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() * evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()) -
+                        evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() * evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).to_string(),
+                        denom: (evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap() * evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).to_string()
+                    })
+                }
+            },
+            "/" => {
+                *inputs_amount = 2;
+                if inp <= 1 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: (evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() * evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).to_string(),
+                        denom: (evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap() * evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap()).to_string()
+                    })
+                }
+            },
+            "*" => {
+                *inputs_amount = 2;
+                if inp <= 1 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: (evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() * evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap()).to_string(),
+                        denom: (evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap() * evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).to_string()
+                    })
+                }
+            },
+            "sin" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).sin()).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "cos" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).cos()).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "tan" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).tan()).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "asin" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).asin()).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "acos" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).acos()).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "atan" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).atan()).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "atan2" => {
+                *inputs_amount = 2;
+                if inp <= 1 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: ((evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).atan2(evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "csc" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: (1. / ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).sin())).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "sec" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: (1. / ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).cos())).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "cot" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: (1. / ((evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).tan())).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "pow" | "pwr" => {
+                *inputs_amount = 2;
+                if inp <= 1 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap().powf(evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).to_string(),
+                        denom: evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap().powf(evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap()).to_string()
+                    })
+                }
+            },
+            "root" => {
+                *inputs_amount = 2;
+                if inp <= 1 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap().powf(evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap()).to_string(),
+                        denom: evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap().powf(evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap()).to_string()
+                    })
+                }
+            },
+            "log" => {
+                *inputs_amount = 2;
+                if inp <= 1 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: (evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())
+                                .log(evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())
+                                .to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            "simplify" => {
+                *inputs_amount = 1;
+                if inp <= 0 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(evaluate(inp - 1, expr, inputs_amount, verbose)?.simplify())
+                }
+            },
+            "%" | "mod" => {
+                *inputs_amount = 2;
+                if inp <= 1 {
+                    *inputs_amount = 0;
+                    None
+                } else {
+                    Some(Fraction {
+                        numer: (
+                                    (evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())
+                                    %
+                                    (evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())
+                                ).to_string(),
+                        denom: "1".to_string()
+                    })
+                }
+            },
+            _ => {
+                *inputs_amount = 0;
+                None
+            }
+        }
+    } else {
+        Some(Fraction {
+            numer: expr[inp].numer.clone(),
+            denom: expr[inp].denom.clone()
+        })
+    }
+}
+
+/*
 fn evaluate(inp : usize, expr : &Vec<Fraction>, inputs_amount : &mut usize, verbose : bool) -> Option<Fraction> {
     if verbose { println!("Im at {}, and i see ({}/{})", inp, expr[inp].numer, expr[inp].denom); }
     if expr[inp].numer.parse::<f64>().is_err() {
@@ -553,6 +833,21 @@ fn evaluate(inp : usize, expr : &Vec<Fraction>, inputs_amount : &mut usize, verb
             } else {
                 Some(evaluate(inp - 1, expr, inputs_amount, verbose)?.simplify())
             }
+        } else if expr[inp].numer == "%" {
+            *inputs_amount = 2;
+            if inp <= 1 {
+                *inputs_amount = 0;
+                None
+            } else {
+                Some(Fraction {
+                    numer: (
+                                (evaluate(inp - 2, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 2, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())
+                                %
+                                (evaluate(inp - 1, expr, inputs_amount, verbose)?.numer.parse::<f64>().unwrap() / evaluate(inp - 1, expr, inputs_amount, verbose)?.denom.parse::<f64>().unwrap())
+                            ).to_string(),
+                    denom: "1".to_string()
+                })
+            }
         } else {
             *inputs_amount = 0;
             None
@@ -564,3 +859,4 @@ fn evaluate(inp : usize, expr : &Vec<Fraction>, inputs_amount : &mut usize, verb
         })
     }
 }
+*/

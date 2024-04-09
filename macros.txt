@@ -1,4 +1,4 @@
- Anything not inside of the macro starter text and the macro ending text is ignored
+Anything not inside of the macro starter text and the macro ending text is ignored
 (in this case the start and ending texts are the greater and less than signs).
 
 (macro start text) (macro name) (macro vars) = (macro body) (macro end text)
@@ -12,8 +12,8 @@ and it becomes
 1 5 + 2 /
 
 Vars can be skipped (but the name and body should not be skipped).
-> pi = 355 113 / <
-> PI = 355 113 / <
+> pi = 431302721 137287920 / <
+> PI = pi <
 > e = pi 4 pow pi 5 pow + 6 root <
 
 > ln input = input e log <
@@ -30,5 +30,3 @@ Vars can be skipped (but the name and body should not be skipped).
 
 > the_silly = 0.1 0.2 + simplify <
 > 😂 🙂🤥 = 🙂🤥 100 * <
-
-Recursion is not possible, as these aren't functions.
